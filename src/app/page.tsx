@@ -1,37 +1,50 @@
+import { FlashcardItem } from "@/features/flashcards/components/flashcard-item";
+import { demoFlashcards } from "@/features/flashcards/data/demo-flashcards";
+
 export default function HomePage() {
   return (
     <main className="min-h-screen bg-slate-50 px-6 py-12 text-slate-900 sm:py-20">
-      <section
-        aria-labelledby="home-title"
-        className="mx-auto flex w-full max-w-3xl flex-col gap-6"
-      >
-        <p className="text-sm font-semibold uppercase tracking-widest text-indigo-700">
-          Study Cards
-        </p>
+      <div className="mx-auto w-full max-w-3xl">
+        <header>
+          <p className="text-sm font-semibold uppercase tracking-widest text-indigo-700">
+            Study Cards
+          </p>
 
-        <h1
-          id="home-title"
-          className="text-4xl font-bold tracking-tight sm:text-6xl"
+          <h1 className="mt-4 text-4xl font-bold tracking-tight sm:text-6xl">
+            Tus apuntes, convertidos en tarjetas de estudio.
+          </h1>
+
+          <p className="mt-6 text-lg leading-8 text-slate-600">
+            Estamos construyendo una herramienta para crear y revisar
+            tarjetas a partir de tus documentos PDF.
+          </p>
+        </header>
+
+        <section
+          aria-labelledby="demo-title"
+          className="mt-12"
         >
-          Convierte tus apuntes en tarjetas de estudio.
-        </h1>
-
-        <p className="max-w-2xl text-lg leading-8 text-slate-600">
-          Selecciona un PDF, revisa sus conceptos principales y estudia
-          con tarjetas que podrás editar y organizar por temas.
-        </p>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold">
-            Estamos preparando tu espacio de estudio
+          <h2
+            id="demo-title"
+            className="text-xl font-semibold"
+          >
+            Prueba una tarjeta
           </h2>
 
-          <p className="mt-3 leading-7 text-slate-600">
-            El siguiente paso será añadir la selección del documento
-            y una vista de tarjetas de ejemplo.
+          <p className="mt-2 leading-7 text-slate-600">
+            Este ejemplo permite comprobar la interacción. Todavía no
+            procesa documentos ni utiliza inteligencia artificial.
           </p>
-        </div>
-      </section>
+
+          <ul className="mt-6 space-y-6">
+            {demoFlashcards.map((card) => (
+              <li key={card.id}>
+                <FlashcardItem card={card} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
     </main>
   );
 }
