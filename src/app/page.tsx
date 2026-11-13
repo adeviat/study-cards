@@ -1,5 +1,7 @@
 import { FlashcardItem } from "@/features/flashcards/components/flashcard-item";
 import { demoFlashcards } from "@/features/flashcards/data/demo-flashcards";
+import { PdfSelector } from "@/features/documents/components/pdf-selector";
+
 
 export default function HomePage() {
   return (
@@ -19,6 +21,26 @@ export default function HomePage() {
             tarjetas a partir de tus documentos PDF.
           </p>
         </header>
+
+        <section
+          aria-labelledby="document-title"
+          className="mt-12"
+        >
+          <h2
+            id="document-title"
+            className="text-xl font-semibold"
+          >
+            Empieza por tu documento
+          </h2>
+
+          <p className="mt-2 leading-7 text-slate-600">
+            Selecciona el PDF que quieres utilizar como material de estudio.
+          </p>
+
+          <div className="mt-6">
+            <PdfSelector />
+          </div>
+        </section>
 
         <section
           aria-labelledby="demo-title"
