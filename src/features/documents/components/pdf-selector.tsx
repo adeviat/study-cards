@@ -9,6 +9,8 @@ import {
   validatePdfFile,
 } from "@/features/documents/lib/validate-pdf-file";
 import type { ExtractedDocument } from "@/features/documents/types/extracted-document";
+import { PageRangeSelector } from "@/features/documents/components/page-range-selector";
+
 
 function getReadingError(error: unknown): string {
   if (error instanceof Error) {
@@ -86,9 +88,6 @@ export function PdfSelector() {
       setIsReading(false);
     }
   }
-
-  const hasText =
-    document?.pages.some((page) => page.text.length > 0) ?? false;
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
@@ -175,42 +174,7 @@ export function PdfSelector() {
       </p>
 
       {document && (
-        <section
-          aria-label="Texto extraído del documento"
-          className="mt-6 border-t border-slate-200 pt-6"
-        >
-          <h3 className="text-lg font-semibold text-slate-900">
-            Contenido del PDF
-          </h3>
-
-          {!hasText && (
-            <p className="mt-3 rounded-lg bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-              No hemos encontrado texto extraíble. El documento podría
-              contener páginas escaneadas o texto que esta extracción
-              no reconoce. Esta versión todavía no incluye OCR.
-            </p>
-          )}
-
-          <div className="mt-4 space-y-3">
-            {document.pages.map((page) => (
-              <details
-                key={page.pageNumber}
-                className="rounded-lg border border-slate-200"
-              >
-                <summary className="cursor-pointer rounded-lg px-4 py-3 font-medium text-slate-800 focus-visible:outline-2 focus-visible:outline-indigo-700">
-                  Página {page.pageNumber}
-                  {!page.text && " — sin texto extraíble"}
-                </summary>
-
-                <div className="max-h-80 overflow-y-auto border-t border-slate-200 p-4">
-                  <p className="whitespace-pre-wrap break-words text-sm leading-7 text-slate-700">
-                    {page.text || "No se ha encontrado texto en esta página."}
-                  </p>
-                </div>
-              </details>
-            ))}
-          </div>
-        </section>
+        <PageRangeSelector document={document} />
       )}
     </div>
   );
