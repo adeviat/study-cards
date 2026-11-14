@@ -7,6 +7,7 @@ import { ExtractedTextPreview } from "@/features/documents/components/extracted-
 import { validatePageRange } from "@/features/documents/lib/validate-page-range";
 import type { PageRange } from "@/features/documents/lib/validate-page-range";
 import type { ExtractedDocument } from "@/features/documents/types/extracted-document";
+import { FlashcardPreparationPanel } from "@/features/flashcards/components/flashcard-preparation-panel";
 
 type PageRangeSelectorProps = {
   document: ExtractedDocument;
@@ -181,7 +182,14 @@ export function PageRangeSelector({
 
       {appliedRange && (
         <ExtractedTextPreview
-          key={`${appliedRange.from}-${appliedRange.to}`}
+          key={`preview-${appliedRange.from}-${appliedRange.to}`}
+          pages={selectedPages}
+        />
+      )}
+
+      {appliedRange && !hasPendingChanges && (
+        <FlashcardPreparationPanel
+          key={`preparation-${appliedRange.from}-${appliedRange.to}`}
           pages={selectedPages}
         />
       )}

@@ -1,5 +1,3 @@
-import { FlashcardItem } from "@/features/flashcards/components/flashcard-item";
-import { demoFlashcards } from "@/features/flashcards/data/demo-flashcards";
 import { PdfSelector } from "@/features/documents/components/pdf-selector";
 
 
@@ -42,30 +40,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section
-          aria-labelledby="demo-title"
-          className="mt-12"
-        >
-          <h2
-            id="demo-title"
-            className="text-xl font-semibold"
-          >
-            Prueba una tarjeta
-          </h2>
-
-          <p className="mt-2 leading-7 text-slate-600">
-            Este ejemplo permite comprobar la interacción. Todavía no
-            procesa documentos ni utiliza inteligencia artificial.
-          </p>
-
-          <ul className="mt-6 space-y-6">
-            {demoFlashcards.map((card) => (
-              <li key={card.id}>
-                <FlashcardItem card={card} />
-              </li>
-            ))}
-          </ul>
-        </section>
       </div>
     </main>
   );
