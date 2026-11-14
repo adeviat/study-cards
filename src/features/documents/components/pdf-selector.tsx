@@ -3,14 +3,36 @@
 import { useId, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 
+import { extractPdfText } from "@/features/documents/lib/extract-pdf-text";
 import {
   MAX_PDF_SIZE_MIB,
   validatePdfFile,
 } from "@/features/documents/lib/validate-pdf-file";
+import type { ExtractedDocument } from "@/features/documents/types/extracted-document";
+
+function getReadingError(error: unknown): string {
+  if (error instanceof Error) {
+    if (error.name === "PasswordException") {
+      return "Este PDF requiere una contraseña. Por ahora, selecciona uno sin protección.";
+    }
+
+    if (error.name === "InvalidPDFException") {
+      return "No se ha podido abrir el archivo como un PDF válido.";
+    }
+
+    if (error.message.startsWith("Esta primera versión admite")) {
+      return error.message;
+    }
+  }
+
+  return "No se ha podido leer el documento. Prueba con otro PDF.";
+}
 
 export function PdfSelector() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [document, setDocument] = useState<ExtractedDocument | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isReading, setIsReading] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -29,13 +51,14 @@ export function PdfSelector() {
 
     setError(validationError);
     setSelectedFile(validationError ? null : file);
+    setDocument(null);
 
-    // Permite volver a seleccionar el mismo archivo.
     event.currentTarget.value = "";
   }
 
   function handleRemoveFile() {
     setSelectedFile(null);
+    setDocument(null);
     setError(null);
 
     if (inputRef.current) {
@@ -43,6 +66,29 @@ export function PdfSelector() {
       inputRef.current.focus();
     }
   }
+
+  async function handleReadDocument() {
+    if (!selectedFile || isReading) {
+      return;
+    }
+
+    setIsReading(true);
+    setError(null);
+    setDocument(null);
+
+    try {
+      const result = await extractPdfText(selectedFile);
+      setDocument(result);
+    } catch (readingError) {
+      console.error("Error al leer el PDF:", readingError);
+      setError(getReadingError(readingError));
+    } finally {
+      setIsReading(false);
+    }
+  }
+
+  const hasText =
+    document?.pages.some((page) => page.text.length > 0) ?? false;
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
@@ -57,8 +103,9 @@ export function PdfSelector() {
         id={helpId}
         className="mt-2 text-sm leading-6 text-slate-600"
       >
-        Un archivo .pdf de hasta {MAX_PDF_SIZE_MIB} MiB. En esta etapa
-        no se envía a ningún servidor.
+        Un archivo .pdf de hasta {MAX_PDF_SIZE_MIB} MiB y 100 páginas.
+        La lectura se realiza en tu navegador, sin enviar el documento
+        a ningún servidor.
       </p>
 
       <input
@@ -66,12 +113,11 @@ export function PdfSelector() {
         id={inputId}
         type="file"
         accept=".pdf,application/pdf"
-        aria-describedby={
-          error ? `${helpId} ${errorId}` : helpId
-        }
+        disabled={isReading}
+        aria-describedby={error ? `${helpId} ${errorId}` : helpId}
         aria-invalid={Boolean(error)}
         onChange={handleFileChange}
-        className="mt-5 block w-full min-w-0 rounded-lg border border-slate-300 p-3 text-sm text-slate-700 file:mr-4 file:rounded-md file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-indigo-700"
+        className="mt-5 block w-full min-w-0 rounded-lg border border-slate-300 p-3 text-sm text-slate-700 file:mr-4 file:rounded-md file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-indigo-700 disabled:cursor-wait disabled:opacity-60"
       />
 
       <div
@@ -82,55 +128,89 @@ export function PdfSelector() {
         {error}
       </div>
 
-      <div role="status" className="mt-4">
-        {selectedFile ? (
-          <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-4">
-            <p className="font-medium text-slate-900">
-              Archivo seleccionado
-            </p>
-
-            <dl className="mt-3 space-y-3 text-sm">
-              <div>
-                <dt className="font-medium text-slate-700">
-                  Nombre
-                </dt>
-                <dd className="mt-1 break-all text-slate-600">
-                  {selectedFile.name}
-                </dd>
-              </div>
-
-              <div>
-                <dt className="font-medium text-slate-700">
-                  Tamaño
-                </dt>
-                <dd className="mt-1 text-slate-600">
-                  {(selectedFile.size / (1024 * 1024)).toFixed(2)} MiB
-                  {" · "}
-                  {selectedFile.size} bytes
-                </dd>
-              </div>
-            </dl>
-
-            <p className="mt-4 text-sm leading-6 text-slate-600">
-              Pendiente de lectura. Todavía no hemos comprobado el
-              contenido del documento.
-            </p>
-          </div>
-        ) : (
-          <p className="text-sm text-slate-500">
-            No hay ningún documento seleccionado.
-          </p>
-        )}
-      </div>
-
       {selectedFile && (
-        <button
-          type="button"
-          onClick={handleRemoveFile}
-          className="mt-4 min-h-11 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-indigo-700"
+        <div className="mt-4 rounded-xl border border-indigo-100 bg-indigo-50 p-4">
+          <p className="font-medium text-slate-900">
+            Archivo seleccionado
+          </p>
+
+          <p className="mt-2 break-all text-sm text-slate-700">
+            {selectedFile.name}
+          </p>
+
+          <p className="mt-1 text-sm text-slate-600">
+            {(selectedFile.size / (1024 * 1024)).toFixed(2)} MiB
+          </p>
+
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={handleReadDocument}
+              disabled={isReading}
+              className="min-h-11 rounded-lg bg-indigo-700 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-indigo-700 disabled:cursor-wait disabled:opacity-60"
+            >
+              {isReading ? "Leyendo documento…" : "Leer documento"}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleRemoveFile}
+              disabled={isReading}
+              className="min-h-11 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-indigo-700 disabled:cursor-wait disabled:opacity-60"
+            >
+              Quitar archivo
+            </button>
+          </div>
+        </div>
+      )}
+
+      <p role="status" className="mt-4 text-sm text-slate-600">
+        {isReading
+          ? "Extrayendo el texto de las páginas. Espera un momento."
+          : document
+            ? `Lectura terminada: ${document.pageCount} páginas.`
+            : !selectedFile
+              ? "No hay ningún documento seleccionado."
+              : "Documento preparado para su lectura."}
+      </p>
+
+      {document && (
+        <section
+          aria-label="Texto extraído del documento"
+          className="mt-6 border-t border-slate-200 pt-6"
         >
-          Quitar archivo
-        </button>
+          <h3 className="text-lg font-semibold text-slate-900">
+            Contenido del PDF
+          </h3>
+
+          {!hasText && (
+            <p className="mt-3 rounded-lg bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+              No hemos encontrado texto extraíble. El documento podría
+              contener páginas escaneadas o texto que esta extracción
+              no reconoce. Esta versión todavía no incluye OCR.
+            </p>
+          )}
+
+          <div className="mt-4 space-y-3">
+            {document.pages.map((page) => (
+              <details
+                key={page.pageNumber}
+                className="rounded-lg border border-slate-200"
+              >
+                <summary className="cursor-pointer rounded-lg px-4 py-3 font-medium text-slate-800 focus-visible:outline-2 focus-visible:outline-indigo-700">
+                  Página {page.pageNumber}
+                  {!page.text && " — sin texto extraíble"}
+                </summary>
+
+                <div className="max-h-80 overflow-y-auto border-t border-slate-200 p-4">
+                  <p className="whitespace-pre-wrap break-words text-sm leading-7 text-slate-700">
+                    {page.text || "No se ha encontrado texto en esta página."}
+                  </p>
+                </div>
+              </details>
+            ))}
+          </div>
+        </section>
       )}
     </div>
   );
