@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
+import type { FormEvent } from "react";
 
 import type { ExtractedPage } from "@/features/documents/types/extracted-document";
 import { FlashcardItem } from "@/features/flashcards/components/flashcard-item";
+import { buildGenerationRequest } from "@/features/flashcards/lib/build-generation-request";
 import { prepareDemoFlashcards } from "@/features/flashcards/lib/prepare-demo-flashcards";
+import { GENERATION_LIMITS } from "@/features/flashcards/schemas/generation-contract";
 import type { Flashcard } from "@/features/flashcards/types/flashcard";
 
 type FlashcardPreparationPanelProps = {
@@ -14,32 +17,68 @@ type FlashcardPreparationPanelProps = {
 type PreparationState =
   | { status: "idle" }
   | { status: "loading" }
-  | { status: "success"; cards: Flashcard[] }
+  | {
+      status: "success";
+      cards: Flashcard[];
+      requestedCount: number;
+    }
   | { status: "error"; message: string };
 
 export function FlashcardPreparationPanel({
   pages,
 }: FlashcardPreparationPanelProps) {
+  const [cardCountValue, setCardCountValue] = useState("5");
   const [state, setState] = useState<PreparationState>({
     status: "idle",
   });
 
-  const hasText = pages.some((page) => page.text.trim().length > 0);
+  const cardCountId = useId();
+  const helpId = useId();
+  const errorId = useId();
+
   const isLoading = state.status === "loading";
 
-  async function handlePrepareCards() {
-    if (isLoading || !hasText) {
+  const pagesWithText = pages.filter(
+    (page) => page.text.trim().length > 0,
+  );
+
+  const characterCount = pagesWithText.reduce(
+    (total, page) => total + page.text.trim().length,
+    0,
+  );
+
+  async function handlePrepareCards(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (isLoading) {
       return;
     }
+
+    const requestResult = buildGenerationRequest(
+      pages,
+      cardCountValue,
+    );
+
+    if (!requestResult.success) {
+      setState({
+        status: "error",
+        message: requestResult.error,
+      });
+
+      return;
+    }
+
+    const request = requestResult.data;
 
     setState({ status: "loading" });
 
     try {
-      const cards = await prepareDemoFlashcards(pages);
+      const cards = await prepareDemoFlashcards(request.pages);
 
       setState({
         status: "success",
         cards,
+        requestedCount: request.cardCount,
       });
     } catch (error) {
       setState({
@@ -62,44 +101,105 @@ export function FlashcardPreparationPanel({
       </h4>
 
       <p className="mt-3 rounded-lg bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-        Modo de demostración: se mostrarán dos tarjetas de ejemplo.
-        No se generan preguntas a partir del PDF ni se envía su
-        contenido a ningún servicio.
+        Modo de demostración: validamos la solicitud y mostramos dos
+        ejemplos fijos. No generamos preguntas a partir del PDF ni
+        enviamos su contenido a ningún servicio.
       </p>
 
-      <p className="mt-4 text-sm text-slate-600">
-        Páginas del rango confirmado: {pages.length}.
-      </p>
+      <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-3">
+        <div>
+          <dt className="font-medium text-slate-800">
+            Páginas seleccionadas
+          </dt>
+          <dd className="mt-1 text-slate-600">
+            {pages.length}
+          </dd>
+        </div>
 
-      <button
-        type="button"
-        onClick={handlePrepareCards}
-        disabled={isLoading || !hasText}
-        className="mt-4 min-h-11 rounded-lg bg-indigo-700 px-5 py-3 text-sm font-medium text-white hover:bg-indigo-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+        <div>
+          <dt className="font-medium text-slate-800">
+            Páginas con texto
+          </dt>
+          <dd className="mt-1 text-slate-600">
+            {pagesWithText.length} / {GENERATION_LIMITS.maxPages}
+          </dd>
+        </div>
+
+        <div>
+          <dt className="font-medium text-slate-800">
+            Caracteres del contenido
+          </dt>
+          <dd className="mt-1 text-slate-600">
+            {characterCount} / {GENERATION_LIMITS.maxCharacters}
+          </dd>
+        </div>
+      </dl>
+
+      <form
+        onSubmit={handlePrepareCards}
+        noValidate
+        className="mt-6"
       >
-        {isLoading
-          ? "Preparando demostración…"
-          : state.status === "success"
-            ? "Reiniciar demostración"
-            : "Preparar tarjetas de demostración"}
-      </button>
+        <label
+          htmlFor={cardCountId}
+          className="block text-sm font-medium text-slate-800"
+        >
+          Cantidad de tarjetas
+        </label>
 
-      {!hasText && (
-        <p className="mt-3 text-sm text-amber-800">
-          Selecciona un rango con texto extraíble para continuar.
+        <p
+          id={helpId}
+          className="mt-2 text-sm leading-6 text-slate-600"
+        >
+          Elige de 1 a {GENERATION_LIMITS.maxCards} tarjetas para la
+          futura generación real. La demostración siempre muestra
+          dos ejemplos.
         </p>
-      )}
+
+        <input
+          id={cardCountId}
+          type="number"
+          min={1}
+          max={GENERATION_LIMITS.maxCards}
+          step={1}
+          required
+          disabled={isLoading}
+          value={cardCountValue}
+          onChange={(event) => {
+            setCardCountValue(event.target.value);
+            setState({ status: "idle" });
+          }}
+          aria-describedby={`${helpId} ${errorId}`}
+          className="mt-3 block min-h-11 w-full max-w-40 rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-700 disabled:opacity-60"
+        />
+
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="mt-4 min-h-11 rounded-lg bg-indigo-700 px-5 py-3 text-sm font-medium text-white hover:bg-indigo-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-indigo-700 disabled:cursor-wait disabled:opacity-60"
+        >
+          {isLoading
+            ? "Preparando demostración…"
+            : state.status === "success"
+              ? "Reiniciar demostración"
+              : "Validar y preparar demostración"}
+        </button>
+
+        <p
+          id={errorId}
+          role="alert"
+          className="mt-3 text-sm text-red-700"
+        >
+          {state.status === "error" ? state.message : ""}
+        </p>
+      </form>
 
       <p role="status" className="mt-3 text-sm text-slate-600">
         {state.status === "loading"
-          ? "Preparando las tarjetas de ejemplo."
+          ? "Solicitud válida. Preparando ejemplos de demostración."
           : state.status === "success"
-            ? `Demostración preparada: ${state.cards.length} tarjetas.`
+            ? `Solicitud validada para ${state.requestedCount} tarjetas. Se muestran ${state.cards.length} ejemplos fijos, no un resultado de generación.`
             : ""}
-      </p>
-
-      <p role="alert" className="mt-3 text-sm text-red-700">
-        {state.status === "error" ? state.message : ""}
       </p>
 
       {state.status === "success" && (
