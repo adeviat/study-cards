@@ -10,6 +10,8 @@ import { prepareDemoFlashcards } from "@/features/flashcards/lib/prepare-demo-fl
 import { GENERATION_LIMITS } from "@/features/flashcards/schemas/generation-contract";
 import type { Flashcard } from "@/features/flashcards/types/flashcard";
 
+import { validateGenerationOnServer } from "@/features/flashcards/lib/validate-generation-on-server";
+
 type FlashcardPreparationPanelProps = {
   pages: ExtractedPage[];
 };
@@ -73,6 +75,8 @@ export function FlashcardPreparationPanel({
     setState({ status: "loading" });
 
     try {
+      await validateGenerationOnServer(request);
+
       const cards = await prepareDemoFlashcards(request.pages);
 
       setState({
@@ -101,10 +105,13 @@ export function FlashcardPreparationPanel({
       </h4>
 
       <p className="mt-3 rounded-lg bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-        Modo de demostración: validamos la solicitud y mostramos dos
-        ejemplos fijos. No generamos preguntas a partir del PDF ni
-        enviamos su contenido a ningún servicio.
+        Modo de demostración: al pulsar el botón, enviaremos el texto de
+        las páginas seleccionadas al servidor de esta aplicación para
+        validarlo. No enviamos el archivo PDF ni llamamos a proveedores
+        de IA. Después mostraremos dos ejemplos fijos, no preguntas
+        generadas a partir del documento.
       </p>
+
 
       <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-3">
         <div>
@@ -179,10 +186,11 @@ export function FlashcardPreparationPanel({
           className="mt-4 min-h-11 rounded-lg bg-indigo-700 px-5 py-3 text-sm font-medium text-white hover:bg-indigo-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-indigo-700 disabled:cursor-wait disabled:opacity-60"
         >
           {isLoading
-            ? "Preparando demostración…"
+            ? "Validando y preparando…"
             : state.status === "success"
-              ? "Reiniciar demostración"
-              : "Validar y preparar demostración"}
+              ? "Revalidar y reiniciar demostración"
+              : "Enviar texto y preparar demostración"}
+
         </button>
 
         <p
@@ -196,11 +204,12 @@ export function FlashcardPreparationPanel({
 
       <p role="status" className="mt-3 text-sm text-slate-600">
         {state.status === "loading"
-          ? "Solicitud válida. Preparando ejemplos de demostración."
+          ? "Validando la solicitud con el servidor y preparando los ejemplos."
           : state.status === "success"
-            ? `Solicitud validada para ${state.requestedCount} tarjetas. Se muestran ${state.cards.length} ejemplos fijos, no un resultado de generación.`
+            ? `Solicitud validada en el servidor para ${state.requestedCount} tarjetas. Se muestran ${state.cards.length} ejemplos fijos, no un resultado de generación.`
             : ""}
       </p>
+
 
       {state.status === "success" && (
         <ul className="mt-6 space-y-5">

@@ -26,9 +26,9 @@ export async function prepareDemoFlashcards(
     },
     {
       id: "prepared-demo-002",
-      question: "Ejemplo: ¿qué contenido recibirá la generación real?",
+      question: "Ejemplo: ¿qué se envía al validar la solicitud?",
       answer:
-        "El contenido de las páginas que hayas seleccionado y confirmado. En esta demostración no se envía información a ningún servicio.",
+        "Se envía el texto de las páginas seleccionadas al servidor de esta aplicación. No se envía el archivo PDF ni se utiliza un proveedor de IA en esta demostración.",
     },
   ];
 }

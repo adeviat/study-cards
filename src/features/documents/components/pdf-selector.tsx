@@ -103,9 +103,11 @@ export function PdfSelector() {
         className="mt-2 text-sm leading-6 text-slate-600"
       >
         Un archivo .pdf de hasta {MAX_PDF_SIZE_MIB} MiB y 100 páginas.
-        La lectura se realiza en tu navegador, sin enviar el documento
-        a ningún servidor.
+        La lectura del PDF se realiza en tu navegador. Solo si después
+        pulsas «Enviar texto y preparar demostración», enviaremos el
+        texto seleccionado al servidor de esta aplicación.
       </p>
+
 
       <input
         ref={inputRef}
