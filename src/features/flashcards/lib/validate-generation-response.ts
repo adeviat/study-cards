@@ -83,6 +83,15 @@ export function validateGenerationResponse(
       };
     }
 
+    const answer = normalizeWhitespace(card.answer);
+
+    if (!excerpt.includes(answer)) {
+      return {
+        success: false,
+        error: `La respuesta de la tarjeta ${cardNumber} no aparece literalmente en su fragmento de referencia.`,
+      };
+    }
+
     const questionKey = normalizeWhitespace(
       card.question,
     ).toLowerCase();

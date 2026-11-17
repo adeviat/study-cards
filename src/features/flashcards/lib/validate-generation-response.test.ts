@@ -22,7 +22,7 @@ function createCard(
 ): GeneratedCard {
   return {
     question: "¿Qué almacena temporalmente la memoria RAM?",
-    answer: "Datos e instrucciones.",
+    answer: "datos e instrucciones.",
     sourcePage: 4,
     sourceExcerpt: "La memoria RAM almacena temporalmente datos e instrucciones.",
     ...overrides,
@@ -101,7 +101,7 @@ describe("validateGenerationResponse", () => {
       {
         cards: [
           createCard({
-            sourceExcerpt: "La memoria RAM\nalmacena   temporalmente",
+            sourceExcerpt: "La memoria RAM\nalmacena   temporalmente datos e instrucciones.",
           }),
         ],
       },
